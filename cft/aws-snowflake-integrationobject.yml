@@ -20,20 +20,17 @@ Parameters:
   snowaccount:
     Description: REQUIRED. Snowflake Account Identifier
     Type: String
-    Default: 'XIA09677.us-east-1'
     AllowedPattern: .+
     ConstraintDescription: snowaccount is required
   snowuser:
     Description: REQUIRED. Snowflake account user
     Type: String
-    Default: 'kmmahaj'
     NoEcho: true
     AllowedPattern: .+
     ConstraintDescription: snowuser is required
   snowpass:
     Description: REQUIRED. Snowflake password for the Snowflake account user
     Type: String
-    Default: 'Summer!23'
     NoEcho: true
     AllowedPattern: .+
     ConstraintDescription: snowpass is required
