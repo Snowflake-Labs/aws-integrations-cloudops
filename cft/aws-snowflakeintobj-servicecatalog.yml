@@ -1,0 +1,83 @@
+# -------------------------------------------------------------------------------------------------
+#
+# Service Catalog Product that launches Snowflake Storage Integration Objects to access Amazon S3
+#  
+# @kmmahaj
+# ---------------------------------------------------------------------------------------------------
+
+
+Parameters:
+  S3StagingBucketURL:
+    Type: String
+    Description: S3 Staging Bucket Prefix that contains the Snowflake Storage Integration for S3 template
+    Default: 'https://s3-snowflakeintegration-accountid-region.s3.amazonaws.com/'
+
+Resources:
+
+#--------------------------------------------------------------------------------------------
+# Service Catalog Portfolio that contains the Snowflake Storage Integration for Amazon S3 Product
+#--------------------------------------------------------------------------------------------
+
+  SnowflakeStorageIntegrationPortfolio:
+    Type: 'AWS::ServiceCatalog::Portfolio'
+    Properties:
+      AcceptLanguage: en
+      Description: Snowflake Storage Integration Portfolio
+      DisplayName: Snowflake Storage Integration Portfolio
+      ProviderName: AWS
+
+  SnowflakeStorageIntegrationProduct:
+    Type: 'AWS::ServiceCatalog::CloudFormationProduct'
+    Properties:
+      AcceptLanguage: en
+      Description: This Service Catalog product deploys the Snowflake Storage Integration Product
+      Distributor: AWS
+      Name: SnowflakeStorageIntegrationProduct
+      Owner: AWS
+      SupportEmail: email@mycompany.com
+      SupportUrl: 'https://www.mycompany.com'
+      SupportDescription: >-
+        SnowflakeStorageIntegrationProduct
+      ProvisioningArtifactParameters:
+        - Description: This is version 1.0 of the Snowflake Storage Integration Product
+          Name: Version - 1.0
+          Info:
+            LoadTemplateFromURL: !Sub "${S3StagingBucketURL}template/aws-snowflake-integrationobject.yml"
+            
+  SnowflakeStorageIntegrationPortfolioAssociation:
+    Type: 'AWS::ServiceCatalog::PortfolioProductAssociation'
+    Properties:
+      PortfolioId: !Ref SnowflakeStorageIntegrationPortfolio
+      ProductId: !Ref SnowflakeStorageIntegrationProduct
+
+  SnowflakeEnduserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SnowflakeEnduserRole
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AWSServiceCatalogEndUserFullAccess
+      Path: /      
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action:
+              - 'sts:AssumeRole'
+
+  SnowflakeEnduserRolePortfolioAssociation:
+    Type: 'AWS::ServiceCatalog::PortfolioPrincipalAssociation'
+    Properties:
+      PrincipalARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/SnowflakeEnduserRole'
+      PortfolioId: !Ref SnowflakeStorageIntegrationPortfolio
+      PrincipalType: IAM
+
+
+  SnowflakeAdminRolePortfolioAssociation:
+    Type: 'AWS::ServiceCatalog::PortfolioPrincipalAssociation'
+    Properties:
+      PrincipalARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/Administrator'
+      PortfolioId: !Ref SnowflakeStorageIntegrationPortfolio
+      PrincipalType: IAM
+
