@@ -40,13 +40,24 @@
  	
 ## Test and Run
 
-1. Navigate to the Service Catalog Console and launch the Snowflake Service Catalog Product.
+1. The Snowflake solution creates a Snowflake Service Catalog Portfolio, a ‘SnowflakeEnduserGroup’ AWS IAM group and provides this IAM group with access to the Portfolio. In order to launch the Snowflake Service Catalog Product, you have 2 options – 
+	1. Option 1 - Grant your current logged in AWS IAM user/role permissions to access the Snowflake Service Catalog Portfolio by following steps [here](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-deploy.html)and launch the Snowflake Service Catalog product using your current logged in IAM user/role.
+	2. Option 2 – Add an IAM user to the ‘SnowflakeEnduserGroup’ IAM group. Log in as this IAM user to launch the Snowflake Service Catalog Product
+2. Navigate to the Service Catalog Console and launch the Snowflake Service Catalog Product.
 	1. Provide Snowflake connection details and the external S3 bucket name and S3 prefix as parameters
-2. Navigate to the AWS IAM console and check that a new IAM role has been provisioned that ends with *S3INTxxxxx* suffix. This suffix will also be the name of your new Snowflake integration object
-3. From your Snowflake account (snowsql or console)-
+3. Navigate to the AWS IAM console and check that a new IAM role has been provisioned that ends with *S3INTxxxxx* suffix. This suffix will also be the name of your new Snowflake integration object
+4. From your Snowflake account (snowsql or console)-
 	1. Validate that a new Snowflake integration object has been created (DESC INTEGRATION *'integrationobjectname'*)
 	2. Obtain the *AWS_IAM_USER_ARN* and *AWS_EXTERNAL_ID* parameters from above and check that the AWS IAM role uses those as the trust relationship and external id parameters
 	3. Validate that a new storage object has been created in Snowflake that references the S3 bucket and uses the integration object (SHOW STAGES IN ACCOUNT)
- 	
+
+## Cleanup
+
+To clean up your account after deploying the solution perform the following steps:
+
+1.	Terminate the Snowflake Service Catalog Provisioned Product. Follow steps [here](https://docs.aws.amazon.com/servicecatalog/latest/userguide/enduser-delete.html) to terminate Service Catalog provisioned products
+2.	If you followed Step 1a (Option 1) in the Test and Run section then remove the access of your logged in AWS user from the Snowflake Service Catalog Portfolio. If you followed Step 1b (Option 2) in the Test and Run section, then remove the IAM user from the ‘SnowflakeEnduserGroup’ IAM group
+3.	Delete the CloudFormation stack for the for the [aws-snowflakeintobj-servicecatalog](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/cft/aws-snowflakeintobj-servicecatalog.yml) template
+
 
  
