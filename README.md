@@ -57,7 +57,7 @@ To clean up your account after deploying the solution perform the following step
 
 1.	Terminate the Snowflake Service Catalog Provisioned Product. Follow steps [here](https://docs.aws.amazon.com/servicecatalog/latest/userguide/enduser-delete.html) to terminate Service Catalog provisioned products
 2.	If you followed Step 1a (Option 1) in the Test and Run section then remove the access of your logged in AWS user from the Snowflake Service Catalog Portfolio. If you followed Step 1b (Option 2) in the Test and Run section, then remove the IAM user from the ‘SnowflakeEnduserGroup’ IAM group
-3.	Delete the CloudFormation stack for the for the [aws-snowflakeintobj-servicecatalog](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/cft/aws-snowflakeintobj-servicecatalog.yml) template
+3.	Delete the CloudFormation stack for the [aws-snowflakeintobj-servicecatalog](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/cft/aws-snowflakeintobj-servicecatalog.yml) template
 
 
  
