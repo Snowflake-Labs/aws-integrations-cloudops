@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Control Tower Lifecycle Events for Snowflake(MPCT-jqowxsqq)
+
+# ----------------------------------------------------------------------------------------------------------
+#   
+#  Enables Snowflake storage integrations to be automatically extended to newly added Control Tower accounts
+#    
+#  During an account lifecycle creation event -
+#    - An SSM Automation that creates Snowflake Storage Integrations is provisioned in the newly addded account. 
+#                               
+##
+## @kmmahaj
+## 
+#
+# ------------------------------------------------------------...............................................
+
+Parameters:
+
+  SnowflakeSSMAutomationURL:
+    Description: Base URL for Snowflake CloudFormation template for managed accounts
+    Type: String
+    Default: 'https://snowflake-controltower-managedaccount.s3.amazonaws.com/aws-snowflake-ssm.yml'
+  SourceBucket:
+    Description: REQUIRED. S3 Bucket that contains the Snowflake integration Lambda 
+    Type: String
+    Default: 's3-snowflakeintegration-SharedServicesAccountId-Region'
+    MinLength: '1'
+    MaxLength: '255'
+  snowaccount:
+    Description: REQUIRED. Snowflake Account Identifier
+    Type: String
+    AllowedPattern: .+
+    ConstraintDescription: snowaccount is required
+  snowuser:
+    Description: REQUIRED. Snowflake account user
+    Type: String
+    NoEcho: true
+    AllowedPattern: .+
+    ConstraintDescription: snowuser is required
+  snowpass:
+    Description: REQUIRED. Snowflake password for the Snowflake account user
+    Type: String
+    NoEcho: true
+    AllowedPattern: .+
+    ConstraintDescription: snowpass is required
+  snowdb:
+    Description: REQUIRED. Snowflake Database
+    Type: String
+    Default: 'SF_TUTS'
+    AllowedPattern: .+
+    ConstraintDescription: snowdb is required
+  snowschema:
+    Description: REQUIRED. Snowflake Schema
+    Type: String
+    Default: 'PUBLIC'
+    AllowedPattern: .+
+    ConstraintDescription: snowschema is required
+
+
+Resources:
+
+# ---------------------------------------------------------------------------------------------------
+#  Create a Snowflake StackSet in the Control Tower Management Account
+#      - The Snowflake StackSet is the basis for the template to be provisioned in the managed accounts 
+# --------------------------------------------------------------------------------------------------
+ 
+  SnowflakeStackSet:
+    Type: AWS::CloudFormation::StackSet
+    Properties:
+      Description: StackSet for creating SSM Automation Execution Role to run Snowflake Storage integration
+      StackSetName: 'SnowflakeSSMAutomationStackset'
+      Parameters:
+        - ParameterKey: SourceBucket
+          ParameterValue: !Ref SourceBucket
+        - ParameterKey: snowaccount
+          ParameterValue: !Ref snowaccount
+        - ParameterKey: snowuser
+          ParameterValue: !Ref snowuser
+        - ParameterKey: snowpass
+          ParameterValue: !Ref snowpass
+        - ParameterKey: snowdb
+          ParameterValue: !Ref snowdb
+        - ParameterKey: snowschema
+          ParameterValue: !Ref snowschema
+      PermissionModel: SELF_MANAGED
+      AdministrationRoleARN: !Join [':', ['arn:aws:iam:', !Ref 'AWS::AccountId', 'role/service-role/AWSControlTowerStackSetRole']]
+      ExecutionRoleName: "AWSControlTowerExecution"
+      Capabilities:
+        - CAPABILITY_NAMED_IAM
+        - CAPABILITY_IAM
+        - CAPABILITY_AUTO_EXPAND
+      TemplateURL: !Ref SnowflakeSSMAutomationURL
+
+# --------------------------------------------------------------------------------------------------
+# 
+#  1- Provisions a CloudWatchEvents Rule that is triggered based on a Control Tower Lifecycle Event
+#  2- Provisions a Lifecyle Lambda as a target for the CloudWatch Events Rule.
+# --------------------------------------------------------------------------------------------------
+
+  SnowflakeCaptureControlTowerLifeCycleEvents:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Capture Control Tower LifeCycle Events for Snowflake and Trigger an Action
+      EventPattern:
+        detail:
+          eventName:
+          - CreateManagedAccount
+          - UpdateManagedAccount
+          eventSource:
+          - controltower.amazonaws.com
+        detail-type:
+        - AWS Service Event via CloudTrail
+        source:
+        - aws.controltower
+      Name: SnowflakeCaptureControlTowerLifeCycleEvents
+      State: ENABLED
+      Targets:
+      - Arn: !GetAtt "SnowflakeTriggerCustomizationsOnLifeCycleEvent.Arn"
+        Id: IDCaptureControlTowerLifeCycleEvents
+
+
+  #Snowflake TriggerLifecyleEvent Lambda
+  SnowflakeTriggerCustomizationsOnLifeCycleEvent:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import boto3
+          import logging
+    
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          stackset_list = ['SnowflakeSSMAutomationStackset']
+          result = {"ResponseMetadata":{"HTTPStatusCode":"400"}}
+          
+          def lambda_handler(event, context):          
+                  
+              masterAcct = event['account']
+              eventDetails = event['detail']
+              regionName = eventDetails['awsRegion']
+              eventName = eventDetails['eventName']
+              srvEventDetails = eventDetails['serviceEventDetails']
+              if eventName == 'CreateManagedAccount' or eventName == 'UpdateManagedAccount':
+                  newAccInfo = {}
+                  logger.info('Event Processed Sucessfully')
+                  if eventName == 'CreateManagedAccount':
+                      newAccInfo = srvEventDetails['createManagedAccountStatus']
+                  if eventName == 'UpdateManagedAccount':
+                      newAccInfo = srvEventDetails['updateManagedAccountStatus']
+                  cmdStatus = newAccInfo['state']
+                  if cmdStatus == 'SUCCEEDED':
+                      '''Sucessful event recieved'''
+                      accId = newAccInfo['account']['accountId']
+                      cloudformation = boto3.client('cloudformation')
+                      for item in stackset_list:
+                          try:
+                              result = cloudformation.create_stack_instances(StackSetName=item, Accounts=[accId], Regions=[regionName])
+                              logger.info('Processed {} Sucessfully'.format(item))
+                          except Exception as e:
+                              logger.error('Unable to launch in:{}, REASON: {}'.format(item, e))
+                  else:
+                      '''Unsucessful event recieved'''
+                      logger.info('Unsucessful Event Recieved. SKIPPING :{}'.format(event))
+                      return(False)
+              else:
+                  logger.info('Control Tower Event Captured :{}'.format(event))
+      Handler: index.lambda_handler
+      MemorySize: 256
+      Role: !GetAtt "SnowflakeTriggerLifecycleEventLambdaRole.Arn"
+      Runtime: python3.7
+      Timeout: 60
+
+
+#Snowflake Trigger LifecyleEvent Lambda Role
+  SnowflakeTriggerLifecycleEventLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowLambdaAssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Sub snowflakelifecyclepolicy-${AWS::Region}
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: '1'
+                Effect: Allow
+                Action:
+                  - 'cloudformation:CreateStackInstances'
+                Resource: !Join [':',['arn:aws:cloudformation', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'stackset/SnowflakeSSMAutomationStackset:*']]
+              - Sid: '2'
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogStreams'
+                Effect: Allow
+                Resource: !Join [':',['arn:aws:logs', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'log-group', '/aws/lambda/SnowflakeTriggerCustomizationsOnLifeCycleEvent:*']]
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+
+    
+  PermissionForEventsToInvokeLambdachk:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt "SnowflakeTriggerCustomizationsOnLifeCycleEvent.Arn"
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt "SnowflakeCaptureControlTowerLifeCycleEvents.Arn"
