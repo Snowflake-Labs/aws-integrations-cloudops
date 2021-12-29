@@ -46,10 +46,6 @@
 
 **Control Tower Managed account:**
 
-1. The Snowflake solution creates a Snowflake Service Catalog Portfolio, a ‘SnowflakeEnduserGroup’ AWS IAM group and provides this IAM group with access to the Portfolio. In order to launch the Snowflake Service Catalog Product, you have 2 options – 
-	1. Option 1 - Grant your current logged in AWS IAM user/role permissions to access the Snowflake Service Catalog Portfolio by following steps [here](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-deploy.html)and launch the Snowflake Service Catalog product using your current logged in IAM user/role.
-	2. Option 2 – Add an IAM user to the ‘SnowflakeEnduserGroup’ IAM group. Log in as this IAM user to launch the Snowflake Service Catalog Product
-
 1. Navigate to the AWS Systems Manager console in your AWS account. Select Documents from the left panel. Select Owned by me on the right panel and search for the ‘Custom-Snowflakestorageintegration’ document.
 	1. Launch your Systems Manager document from the console. Provide Snowflake connection details and an S3 bucket name as parameters
 2. Navigate to the AWS IAM console and check that a new IAM role has been provisioned that ends with *S3INTxxxxx* suffix. This suffix will also be the name of your new Snowflake integration object
