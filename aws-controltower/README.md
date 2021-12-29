@@ -33,6 +33,10 @@
 1. Create an S3 bucket: *s3-snowflakeintegration-accountId-region*. Replace accountId and region with the AWS Account ID and region of your shared services AWS account. 
 2. Create a folder called *SnowflakeIntegration_Lambda_SSM* and upload the [SnowflakeIntegration_Lambda_SSM.zip](https://github.com/Snowflake-Labs/aws-integrations-cloudops/blob/master/aws-controltower/lambda/SnowflakeIntegration_Lambda_SSM.zip) file. This lambda uses the Snowflake Python Connector to query and update Snowflake
 3. Upload the [snowflakelayer.zip](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/layer/snowflakelayer.zip) in the root folder of this S3 object. This zip file packages the Snowflake connector as an AWS Lambda layer
+4. Provide organization level read access to this S3 bucket:
+	1. Download the [s3bucketpolicy.json](https://github.com/Snowflake-Labs/aws-integrations-cloudops/blob/master/aws-controltower/cft/s3bucketpolicy.json) permissions policy file. Replace accountid and region with the AWS Account ID and region of your shared services AWS account. Sign in to your Control Tower organization's management account. Navigate to the AWS Organizations console and choose Settings. Note down the organization ID of your Control Tower organization and replace organizationid in the s3bucketpolicy.json file with this identifier. 
+	2. Add the s3bucketpolicy.json as a bucket policy to your s3-snowflakeintegration-accountId-region S3 bucket from the AWS console.
+
 	
 **Control Tower Management account:**
 
