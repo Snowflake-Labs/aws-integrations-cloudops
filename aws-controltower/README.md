@@ -1,11 +1,17 @@
 <p align="center">
 </p>
 
-# Use AWS Service Catalog to automate Snowflake storage integration to access Amazon S3
+# Use AWS Control Tower to automate multi account Snowflake storage integrations in AWS
+
+
+## Overview
 
 1. Snowflake storage integrations are Snowflake objects that allow Snowflake to read and write data to Amazon S3. Snowflake storage integrations leverage AWS IAM to access S3. The S3 bucket is referenced by the Snowflake integration from an external (i.e. S3) Snowflake stage object
-2. This solution provides full automation for Snowflake to access S3 using AWS Service Catalog. The solution implements an AWS Service Catalog product that automates Snowflake access to S3.
-	1. The Service Catalog product provisions a Snowflake integration object, attaches an IAM role to it and creates a Snowflake stage for it that references S3. 
+
+2. The Control Tower integration with Snowflake enables Snowflake storage integrations with Amazon S3 to be automatically available for all newly added AWS accounts in an AWS Control Tower environment.
+
+3. Each time AWS Control Tower provisions a new account in AWS, the account is already set up with an AWS Systems Manager automation runbook that can be used to create Snowflake integrations with S3 buckets in that account. 
+
 
 
 ## How it Works
@@ -23,7 +29,7 @@
  
 ## Solution Design
 
-![](images/snowflake-arch.png)
+![](images/snowflake-controltower-arch-diagram.PNG)
 
 
 ## Prerequisites
