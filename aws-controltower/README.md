@@ -6,11 +6,9 @@
 
 ## Overview
 
-1. Snowflake storage integrations are Snowflake objects that allow Snowflake to read and write data to Amazon S3. Snowflake storage integrations leverage AWS IAM to access S3. The S3 bucket is referenced by the Snowflake integration from an external (i.e. S3) Snowflake stage object
+1. Snowflake storage integrations are Snowflake objects that allow Snowflake to read and write data to Amazon S3. This Control Tower integration with Snowflake solution enables Snowflake storage integrations with Amazon S3 to be automatically available for all newly added AWS accounts in an AWS Control Tower environment.
 
-2. The Control Tower integration with Snowflake enables Snowflake storage integrations with Amazon S3 to be automatically available for all newly added AWS accounts in an AWS Control Tower environment.
-
-3. Each time AWS Control Tower provisions a new account in AWS, the account is already set up with an AWS Systems Manager automation runbook that can be used to create Snowflake integrations with S3 buckets in that account. 
+3. Each time AWS Control Tower provisions a new account in AWS, the account is automatically setup with an AWS Systems Manager automation runbook for creating Snowflake storage integrations with S3 in that account. The administrator for the new AWS account launches the runbook to create Snowflake integrations with S3 buckets in that account. 
 
 
 
