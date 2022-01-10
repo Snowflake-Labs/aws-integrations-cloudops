@@ -1,7 +1,7 @@
 <p align="center">
 </p>
 
-# Use AWS Systems Manager Automation runbooks to automate Snowflake storage integrations in AWS
+# Use an AWS Systems Manager Automation runbook to automate Snowflake storage integrations in AWS
 
 
 ## Overview
