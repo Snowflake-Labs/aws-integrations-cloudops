@@ -61,7 +61,7 @@ def get_snowflake_config(sf_config_name):
     return config
 
 
-def create_iam_policy(externalid, iamrolearn,SNOW_S3_BUCKET,SNOW_INT):
+def create_iam_policy(externalid, iamrolearn,SNOW_S3_BUCKET,SNOW_INT,SNOW_ROLE):
     iam = boto3.client('iam')
     s3fullresourcearn = "arn:aws:s3:::" + SNOW_S3_BUCKET + '/*'
     s3bucketresourcearn = "arn:aws:s3:::" + SNOW_S3_BUCKET
@@ -83,14 +83,7 @@ def create_iam_policy(externalid, iamrolearn,SNOW_S3_BUCKET,SNOW_INT):
         {
             "Effect": "Allow",
             "Action": "s3:ListBucket",
-            "Resource": s3bucketresourcearn,
-            "Condition": {
-                "StringLike": {
-                    "s3:prefix": [
-                        s3prefix
-                    ]
-                }
-            }
+            "Resource": s3bucketresourcearn
         }
         ]
     }
@@ -123,7 +116,7 @@ def create_iam_policy(externalid, iamrolearn,SNOW_S3_BUCKET,SNOW_INT):
     AssumeRolePolicyDocument = json.dumps(trust_relationship_policy)
     print(AssumeRolePolicyDocument)
     
-    snowrole = "SnowflakeS3AccessRole-" + SNOW_S3_BUCKET + SNOW_INT
+    snowrole = SNOW_ROLE
     response_role = iam.create_role(
         RoleName=snowrole,
         AssumeRolePolicyDocument=AssumeRolePolicyDocument
@@ -166,13 +159,14 @@ def lambda_handler(event, context):
     randomstr = ''.join(random.choice(letters) for i in range(3))
     randomnum = str(random.randrange(2,100))
     SNOW_INT = "S3INT" + randomstr + randomnum
+    SNOW_ROLE = "SFAccessRole-" + SNOW_INT
     
     
     SNOW_S3_LOCATION = 's3://' + SNOW_S3_BUCKET +'/'
     try:
         
         sql_1 = 'create storage integration ' + SNOW_INT  + ' type = external_stage storage_provider = s3 enabled = true' \
-                + ' storage_aws_role_arn = ' + "'" + "arn:aws:iam::" + CURRENT_AWS_ACCOUNT + ":role/myrole" + "'" + ' storage_allowed_locations = (' + "'" + SNOW_S3_LOCATION + "'" +')'
+                + ' storage_aws_role_arn = ' + "'" + "arn:aws:iam::" + CURRENT_AWS_ACCOUNT + ":role/" + SNOW_ROLE + "'" + ' storage_allowed_locations = (' + "'" + SNOW_S3_LOCATION + "'" +')'
         print(sql_1)
         cs.execute(sql_1)
         
@@ -197,7 +191,7 @@ def lambda_handler(event, context):
             AWS_IAM_USER_ARN = property_value
             print('{0}, {1}'.format(property, AWS_IAM_USER_ARN))
             
-        create_iam_policy(AWS_EXTERNAL_ID,AWS_IAM_USER_ARN,SNOW_S3_BUCKET,SNOW_INT)
+        create_iam_policy(AWS_EXTERNAL_ID,AWS_IAM_USER_ARN,SNOW_S3_BUCKET,SNOW_INT,SNOW_ROLE)
         
         sql_5 = 'create stage ' + "S3STAGE" + SNOW_INT + ' storage_integration = ' + SNOW_INT + ' url = (' + "'" + SNOW_S3_LOCATION + "'" +')'
         print(sql_5)
