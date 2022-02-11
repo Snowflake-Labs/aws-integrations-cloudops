@@ -142,7 +142,11 @@ Resources:
             Statement:
               - Sid: '1'
                 Action:
-                  - 's3:*'
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersionTagging
+                  - s3:GetObjectVersionAcl
                 Effect: Allow
                 Resource:
                   - !Sub arn:${AWS::Partition}:s3:::${SourceBucket}
@@ -156,11 +160,6 @@ Resources:
                 Effect: Allow
                 Resource: '*'
               - Sid: '3'
-                Action:
-                  - 'ssm:*'
-                Effect: Allow
-                Resource: '*'
-              - Sid: '4'
                 Action:
                   - 'secretsmanager:GetSecretValue'
                   - 'secretsmanager:ListSecrets'
@@ -198,8 +197,6 @@ Resources:
 
   SSMPermissionToCallSnowflakeLambda:
     Type: 'AWS::Lambda::Permission'
-    DependsOn:
-      - SnowflakeIntegrationLambda
     Properties:
       FunctionName: !GetAtt 
         - SnowflakeIntegrationLambda
