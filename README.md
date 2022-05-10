@@ -42,7 +42,8 @@ CREATE OR REPLACE USER store_admin PASSWORD = '<password>'
             DISPLAY_NAME = 'store_admin' 
             DEFAULT_ROLE = "store_rl" 
             MUST_CHANGE_PASSWORD = FALSE;
-GRANT ROLE store_rl TO USER store_admin;```
+GRANT ROLE store_rl TO USER store_admin;
+```
 3. Option - Have an AWS User Group with privliges to create an IAM Role, Create and access AWS Secrets, Create Lambda Functions/Layer, Relevant S3 bucket access and KMS Key creation  
 
 ## How to Install
@@ -53,7 +54,7 @@ GRANT ROLE store_rl TO USER store_admin;```
 ## Test and Run
 
 1. The Snowflake solution creates a Snowflake Service Catalog Portfolio, a ‘SnowflakeEnduserGroup’ AWS IAM group and provides this IAM group with access to the Portfolio. In order to launch the Snowflake Service Catalog Product, you have 2 options – 
-	1. Option 1 - Grant your current logged in AWS IAM user/role permissions to access the Snowflake Service Catalog Portfolio by following steps [here](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-deploy.html)and launch the Snowflake Service Catalog product using your current logged in IAM user/role.
+	1. Option 1 - Grant your current logged in AWS IAM user/role permissions to access the Snowflake Service Catalog Portfolio by following steps [here](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-deploy.html) and launch the Snowflake Service Catalog product using your current logged in IAM user/role.
 	2. Option 2 – Add an IAM user to the ‘SnowflakeEnduserGroup’ IAM group. Log in as this IAM user to launch the Snowflake Service Catalog Product
 2. Make sure the user that accesses Service Catalog also has access to the User Group or Privilges outlined in the Prerequisites Step 3
 3. Navigate to the Service Catalog Console and launch the Snowflake Service Catalog Product.
