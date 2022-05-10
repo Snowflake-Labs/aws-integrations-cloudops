@@ -1,300 +1,509 @@
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: MIT-0
-#
-#  Automates creation Snowflake integration object for S3 access. 
-#  - Creates an integration between any supplied Snowflake DB/Schema and Amazon S3 bucket
-#  
-#
-# kmmahaj
+## TODO:
+  # Validate path for S3 data location
+  # Check that Snowflake account exists and it can connect with provided credentials 
 
-AWSTemplateFormatVersion: 2010-09-09
-Description: >-
-  AWS CloudFormation template to create Snowflake integration object for S3 access.
+AWSTemplateFormatVersion: "2010-09-09"
 Parameters:
-  SourceBucket:
-    Description: S3 Bucket that contains the Snowflake integration Lambda 
+  dataS3BucketName:
     Type: String
-    Default: 's3-snowflakeintegration-acountId-region'
-    MinLength: '1'
-    MaxLength: '255'
-  snowaccount:
-    Description: REQUIRED. Snowflake Account Identifier
+    Description: "Name of the S3 bucket in which data is stored"
+    AllowedPattern: ".+"
+  SnowflakeAssetsBucket:
     Type: String
-    AllowedPattern: .+
-    ConstraintDescription: snowaccount is required
-  snowuser:
-    Description: REQUIRED. Snowflake account user
+    Description: "S3 bucket that contains Snowflake driver and assets"
+    AllowedPattern: ".*"
+    Default: "s3-snowflakeintegration-acountId-region"
+  snowflakeAccount:
     Type: String
-    NoEcho: true
-    AllowedPattern: .+
-    ConstraintDescription: snowuser is required
-  snowpass:
-    Description: REQUIRED. Snowflake password for the Snowflake account user
+    Description: "Your Snowflake Account ID"
+  snowflakeUsername:
     Type: String
-    NoEcho: true
-    AllowedPattern: .+
-    ConstraintDescription: snowpass is required
-  snowdb:
-    Description: REQUIRED. Snowflake Database
+    Description: "Snowflake Username"
+  snowflakePassword:
+    NoEcho: true  
     Type: String
-    Default: 'SF_TUTS'
-    AllowedPattern: .+
-    ConstraintDescription: snowdb is required
-  snowschema:
-    Description: REQUIRED. Snowflake Schema
+    Description: "Snowflake Password"
+  snowflakeRole:
     Type: String
-    Default: 'PUBLIC'
-    AllowedPattern: .+
-    ConstraintDescription: snowschema is required
-  S3BUCKETNAME:
-    Description: REQUIRED. Amazon S3 Bucket Name. This is the name of the S3 bucket that needs to be accessed by the Snowflake Integration object
+    Description: "Snowflake Role that will be used to create Integrations"
+    AllowedPattern: ".+"
+    Default: "STORE_RL"
+  snowflakeStorageIntegrationName:
     Type: String
-    AllowedPattern: .+
-    Default: "mybucket1"
-    ConstraintDescription: S3BUCKETNAME is required
-  S3BUCKETPREFIX:
-    Description: REQUIRED. Amazon S3 Bucket prefix. This is the S3 prefix/folder of the bucket that needs to be accessed by the Snowflake Integration object
-    Type: String
-    AllowedPattern: .+
-    Default: "mypath1"
-    ConstraintDescription: S3BUCKETPREFIX is required
-  snowtable:
-    Description: OPTIONAL. Name of a Snowflake table in the Snowflake DB
-    Type: String
-    Default: 'EMP_BASIC'
-    AllowedPattern: .+
-    ConstraintDescription: snowtable is optional
+    Description: "Name of the Storage Integration to be created"
+    AllowedPattern: ".+"
+    Default: "SINT" 
   SnowflakeSecretArn:
     Description: >-
       Enter ARN of the Secrets Manager Secret that contains Snowflake connection information
     Type: String
     Default: ''
-  SnowflakeLambdaArn:
-    Description: >-
-      Enter ARN of the Snowflake Lambda function if the product was already launched earlier
-    Type: String
-    Default: ''
-
 
 Conditions:
-  CreateNewLambda: !Equals 
-    - !Ref SnowflakeLambdaArn
-    - ''
-
   CreateNewSnowflakeSecret: !Equals 
     - !Ref SnowflakeSecretArn
     - ''
-
+    
 Resources:
-
-# Secrets Management - Snowflake Credentials
-
-  SnowflakeKMSKey:
-    Type: AWS::KMS::Key
-    Condition: CreateNewSnowflakeSecret
-    Properties:
-      Description: "This is KMS Key Id used to encrypt/decrypt the Secret"
-      EnableKeyRotation: true
-      KeyPolicy:
-        Version: '2012-10-17'
-        Id: sf-key-default-1
-        Statement:
-          - Sid: Allow administration of the key
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action:
-              - kms:Create*
-              - kms:Describe*
-              - kms:Enable*
-              - kms:List*
-              - kms:Put*
-              - kms:Update*
-              - kms:Revoke*
-              - kms:Disable*
-              - kms:Get*
-              - kms:Delete*
-              - kms:ScheduleKeyDeletion
-              - kms:CancelKeyDeletion
-            Resource: '*'
-          - Sid: Allow use of the key
-            Effect: Allow
-            Principal:
-              AWS: !Sub ${AWS::AccountId}
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt
-              - kms:GenerateDataKey
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: '*'
-            Condition:
-              StringEquals:
-                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
-                kms:CallerAccount: !Sub ${AWS::AccountId}
-
-  SnowflakeKMSAlias:
-    Type: AWS::KMS::Alias
-    Condition: CreateNewSnowflakeSecret
-    Properties:
-      AliasName: !Sub "alias/Snowflake-KMS-${AWS::StackName}"
-      TargetKeyId:
-        Ref: SnowflakeKMSKey
-
-  #Create Secret 
-  SnowflakeSecretString:
+  # Secrets Manager Secret for Snowflake credentials
+  SnowflakeSecret:
     Type: AWS::SecretsManager::Secret
     Condition: CreateNewSnowflakeSecret
     Properties:
-      Description: Credentials required for Snowflake
-      KmsKeyId: !Ref SnowflakeKMSKey
+      Description: "Secret to store Snowflake credential"
       SecretString:
-        Fn::Join:
-        - ''
-        - - '{"snowaccount":"'
-          - Ref: snowaccount
-          - '","snowuser": "'
-          - Ref: snowuser
-          - '","snowpass": "'
-          - Ref: snowpass
-          - '","snowdb": "'
-          - Ref: snowdb
-          - '","snowschema": "'
-          - Ref: snowschema
-          - '"}'
-
-#---------------------------------------------------------------------------------------------------
-#  1- Lambda Function that creates the Snowflake integration with S3
-#  2- Custom Lambda backed resource to create the Snowflake Storage integration
-# --------------------------------------------------------------------------------------------------
-
-#Custom Lambda backed Resource for creating the Snowflake Storage Integration Object
-  CreateSnowflakeStorageIntegration:
-    Type: 'Custom::CreateSnowflakeStorageIntegration'
-    DependsOn:
-      - SnowflakeIntegrationLambdaExecutePermission
+                Fn::Join:
+                - ''
+                - - '{"username": "'
+                  - Ref: snowflakeUsername
+                  - '","password": "'
+                  - Ref: snowflakePassword
+                  - '","accountid": "'
+                  - Ref: snowflakeAccount
+                  - '","snowflake_role": "'
+                  - Ref: snowflakeRole
+                  - '"}'
+  # KMS Key
+  KMSKey:
+    Type: AWS::KMS::Key
     Properties:
-      ServiceToken:
-        !If [CreateNewLambda, !GetAtt 'SnowflakeIntegrationLambda.Arn', !Ref SnowflakeLambdaArn]
-      SourceAccountId: !Ref 'AWS::AccountId'
-      SNOW_S3_BUCKETNAME: !Ref S3BUCKETNAME
-      SNOW_S3_BUCKETPREFIX: !Ref S3BUCKETPREFIX
-      SNOW_SECRET:
-        !If [CreateNewSnowflakeSecret, !Ref SnowflakeSecretString, !Ref SnowflakeSecretArn]
-   
-
-#Permission for CFN to invoke Snowflake Storage Integration lambda backed resource
-  SnowflakeIntegrationLambdaExecutePermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName:
-        !If [CreateNewLambda, !GetAtt 'SnowflakeIntegrationLambda.Arn', !Ref SnowflakeLambdaArn]
-      Principal: 'cloudformation.amazonaws.com'
-      SourceAccount: !Ref 'AWS::AccountId'
-
-#Lambda Function that creates the Snowflake integration with S3
-  SnowflakeIntegrationLambda:
-    Type: 'AWS::Lambda::Function'
-    Condition: CreateNewLambda
-    Properties:
-      FunctionName: !Join 
-        - ''
-        - - SnowflakeIntegration_
-          - Lambda
-      Role: !GetAtt SnowflakeIntegrationLambdaRole.Arn
-      Code:
-        S3Bucket: !Ref SourceBucket
-        S3Key: !Join 
-          - ''
-          - - SnowflakeIntegration_Lambda
-            - /
-            - SnowflakeIntegration_Lambda
-            - .zip
-      Description: SnowflakeIntegrationLambda
-      Handler: SnowflakeIntegration_Lambda.lambda_handler
-      MemorySize: '256'
-      Runtime: python3.7
-      Layers:
-        - !Ref SnowflakeLayer
-      Environment:
-        Variables:
-          CURRENT_AWS_ACCOUNT: !Ref 'AWS::AccountId'
-          SNOW_S3_BUCKETNAME: !Ref S3BUCKETNAME
-          SNOW_S3_BUCKETPREFIX: !Ref S3BUCKETPREFIX
-          SNOW_TABLE: !Ref snowtable
-          SNOW_SECRET: !Ref SnowflakeSecretString
-      Timeout: 500
-
-#Lambda Layer for Snowflake Python Connector
-  SnowflakeLayer:
-    Type: AWS::Lambda::LayerVersion
-    Condition: CreateNewLambda
-    Properties:
-      CompatibleRuntimes:
-        - python3.6
-        - python3.7
-        - python3.8
-      Content:
-        S3Bucket: !Ref SourceBucket
-        S3Key: snowflakelayer.zip
-      Description: Lambda layer for Snowflake Python Connector
-      LayerName: snowflakelayer
-      LicenseInfo: MIT
-
-#IAM Role for the SnowflakeIntegration Lambda
-  SnowflakeIntegrationLambdaRole:
-    Type: 'AWS::IAM::Role'
-    Condition: CreateNewLambda
-    Properties:
-      RoleName: !Sub snowflakeintegrationlamdarole-${AWS::Region}-${S3BUCKETNAME}-${S3BUCKETPREFIX}
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: !Join
+        - "-"
+        - - "snowflake-store-key"
+          - !Select
+            - 0
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - "/"
+                  - !Ref "AWS::StackId"
         Statement:
-          - Sid: AllowLambdaAssumeRole
-            Effect: Allow
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iam::'
+                - Ref: AWS::AccountId
+                - :root
+          Action: kms:*
+          Resource: '*'
+  # ExternalStage role
+  SnowflakeExternalStageRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join
+      - "-"
+      - - "Snowflake-Store-ExternalStage-Role"
+        - !Select
+          - 0
+          - !Split
+            - "-"
+            - !Select
+              - 2
+              - !Split
+                - "/"
+                - !Ref "AWS::StackId"
+      Description: IAM Role used for Snowflake external stage
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
             Principal:
-              Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - 'sts:AssumeRole'
       Policies:
-        - PolicyName: SnowflakeIntegrationLambdaPolicy
+        - PolicyName: !Join
+          - "-"
+          - - "Snowflake-Store-ExternalStage-S3-Policy"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
           PolicyDocument:
             Version: 2012-10-17
             Statement:
-              - Sid: '1'
+              - Effect: Allow
                 Action:
-                  - 's3:*'
-                Effect: Allow
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                Resource: !Sub
+                  - 'arn:aws:s3:::${dataS3BucketName}/*'
+                  - { dataS3BucketName: !Ref dataS3BucketName }
+              - Effect: Allow
+                Action:
+                  - "s3:ListBucket"
+                Resource: !Sub
+                  - 'arn:aws:s3:::${dataS3BucketName}'
+                  - { dataS3BucketName: !Ref dataS3BucketName }
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                Resource: !Sub
+                  - 'arn:aws:s3:::${SnowflakeAssetsBucket}/*'
+                  - { SnowflakeAssetsBucket: !Ref SnowflakeAssetsBucket }
+
+   # Lambda Layer
+  CreateSnowflakeResourcesLambdaLayer:
+    Type: AWS::Lambda::LayerVersion   
+    Properties:
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+      Content:
+        S3Bucket: !Ref SnowflakeAssetsBucket
+        S3Key: snowflakelayer.zip
+      Description: 'Lambda layer for Snowflake Python Connector'
+      LayerName: snowflakelayer
+  # IAM Role and Policy for SF Resource Deployment Lambda 
+  CreateSnowflakeResourcesExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: IAM Role used to create Snowflake resources from the CloudFormation template
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchLogsFullAccess'
+      Policies:
+        - PolicyName: kms-permissions
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'kms:CreateGrant'
+                  - "kms:Decrypt"
+                  - "kms:DescribeKey"
+                  - "kms:Encrypt"
+                  - "kms:GenerateDataKey*"
+                  - "kms:ReEncrypt*"
                 Resource:
-                  - !Sub arn:${AWS::Partition}:s3:::${SourceBucket}
-                  - !Sub arn:${AWS::Partition}:s3:::${SourceBucket}/*
-              - Sid: '2'
-                Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                  - 'logs:DescribeLogStreams'
-                Effect: Allow
-                Resource: '*'
-              - Sid: '3'
-                Action:
-                  - 'ssm:*'
-                Effect: Allow
-                Resource: '*'
-              - Sid: '4'
+                  - !Join
+                    - ":"
+                    - - "arn"
+                      - !Ref AWS::Partition
+                      - "kms"
+                      - !Ref AWS::Region
+                      - !Ref AWS::AccountId
+                      - "alias/aws/secretsmanager"
+                  - !GetAtt KMSKey.Arn
+        - PolicyName: secrets-permissions
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
                 Action:
                   - 'secretsmanager:GetSecretValue'
-                  - 'secretsmanager:ListSecrets'
-                Effect: Allow
-                Resource: !Join [':',['arn:aws:secretsmanager', !Ref 'AWS::Region', !Ref 'AWS::AccountId','secret','SnowflakeSecretString-*']]
-              - Sid: '5'
+                Resource: !If [CreateNewSnowflakeSecret, !Ref SnowflakeSecret, !Ref SnowflakeSecretArn]
+        - PolicyName: update-iam-role
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
                 Action:
-                  - 'kms:Decrypt'
-                Effect: Allow
-                Resource: !GetAtt "SnowflakeKMSKey.Arn"
-      ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/IAMFullAccess'
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess'
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+                  - 'iam:UpdateAssumeRolePolicy'
+                Resource: !GetAtt SnowflakeExternalStageRole.Arn
+  # Lambda def for creating the external stage
+  CreateSnowflakeResourcesLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          import logging
+          from botocore.exceptions import ClientError
+          import requests
 
+          import snowflake.connector
+
+          SUCCESS = "SUCCESS"
+          FAILED = "FAILED"
+          EMPTY_RESPONSE_DATA = {}
+
+          logger = logging.getLogger(__name__)
+          logger.setLevel(logging.INFO)
+
+
+          def get_secret_information(region_name, secret_name):
+              logger.info("Getting secret information")
+              try:
+                  secretsmanager = boto3.client("secretsmanager")
+
+                  return secretsmanager.get_secret_value(SecretId=secret_name)
+              except ClientError as e:
+                  if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                      logger.exception(
+                          "The requested secret " + secret_name + " was not found"
+                      )
+                  else:
+                      logger.exception(e)
+                  raise e
+
+
+          def connect_to_snowflake(get_secret_value_response):
+              """Creates an instance of a Snowflake connection."""
+              secret_string = get_secret_value_response["SecretString"]
+
+              secret = json.loads(secret_string)
+              snowflake_account = secret["accountid"]
+              snowflake_password = secret["password"]
+              snowflake_userName = secret["username"]
+              snowflake_role_name = secret["snowflake_role"]
+
+              # Connect to Snowflake
+              logger.info("Connecting to Snowflake")
+              snowflake_connection = snowflake.connector.connect(
+                  user=snowflake_userName,
+                  password=snowflake_password,
+                  account=snowflake_account,
+                  role=snowflake_role_name,
+              )
+
+              return snowflake_connection
+
+
+          def create_storage_integration(
+              snowflake_cursor, storage_integration_name, role_arn, s3_bucket_name
+          ):
+              """Creates a Snowflake storage integration."""
+              logger.info("Creating Storage Integration")
+
+              storage_integration_str = (
+                  (
+                      "create or replace storage integration \"%s\" \
+              type = external_stage \
+              storage_provider = s3 \
+              enabled = true \
+              storage_aws_role_arn = '%s' \
+              storage_allowed_locations = ('s3://%s')"
+                  )
+                  % (storage_integration_name, role_arn, s3_bucket_name)
+              )
+
+              snowflake_cursor.execute(storage_integration_str)
+
+
+          def get_storage_integration_info_for_policy(
+              snowflake_cursor, storage_integration_name
+          ):
+              """Retrieves the IAM role ARN and External ID for the Snowflake role that will assume the IAM role created by Cloudformation."""
+              logger.info("Describing Storage Integration")
+              storage_user_arn = ""
+              storage_external_id = ""
+
+              snowflake_cursor.execute(
+                  ('describe integration "%s"') % (storage_integration_name)
+              )
+              rows = snowflake_cursor.fetchall()
+              for row in rows:
+                  value = list(row)
+                  if value[0] == "STORAGE_AWS_IAM_USER_ARN":
+                      storage_user_arn = value[2]
+                  if value[0] == "STORAGE_AWS_EXTERNAL_ID":
+                      storage_external_id = value[2]
+              return {
+                  "storage_user_arn": storage_user_arn,
+                  "storage_external_id": storage_external_id,
+              }
+
+
+          def create_policy_string(storage_integration_info):
+              """Generate the Trust Policy to allow a Snowflake owned role to assume the IAM role."""
+              policy_json = {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                      {
+                          "Effect": "Allow",
+                          "Principal": {
+                              "AWS": [storage_integration_info["storage_user_arn"]]
+                          },
+                          "Action": "sts:AssumeRole",
+                          "Condition": {
+                              "StringEquals": {
+                                  "sts:ExternalId": storage_integration_info[
+                                      "storage_external_id"
+                                  ]
+                              }
+                          },
+                      },
+                  ],
+              }
+              return json.dumps(policy_json)
+
+
+          def sendResponse(event, context, responseStatus, responseData):
+              responseBody = {
+                  "Status": responseStatus,
+                  "Reason": "See the details in CloudWatch Log Stream: "
+                  + context.log_stream_name,
+                  "PhysicalResourceId": context.log_stream_name,
+                  "StackId": event["StackId"],
+                  "RequestId": event["RequestId"],
+                  "LogicalResourceId": event["LogicalResourceId"],
+                  "Data": responseData,
+              }
+              req = requests.put(event["ResponseURL"], data=json.dumps(responseBody))
+              if req.status_code != 200:
+                  raise Exception(
+                      "Received a non-200 HTTP response while sending response to CloudFormation."
+                  )
+              return
+
+
+          def lambda_handler(event, context):
+              """Entrypoint for the lambda."""
+              # Get variables from os
+              region_name = os.environ["Region"]
+              role_arn = os.environ["RoleARN"]
+              role_name = os.environ["RoleName"]
+              s3_bucket_name = os.environ["S3BucketName"]
+              storage_integration = os.environ["StorageIntegrationName"]
+              secret_name = os.environ["SecretArn"]
+
+              logger.info("role_arn: " + role_arn)
+              logger.info("role_name: " + role_name)
+              logger.info("s3_bucket_name: " + s3_bucket_name)
+              logger.info("region_name: " + region_name)
+              logger.info("secret_name: " + secret_name)
+
+              # Initialize integration related variables
+              storage_integration_info = {}
+
+              # Delete
+              if event["RequestType"] == "Delete":
+                  sendResponse(event, context, SUCCESS, EMPTY_RESPONSE_DATA)
+                  return
+
+              # Get the information connection from Secrets Manager
+              try:
+                  get_secret_value_response = get_secret_information(
+                      region_name, secret_name
+                  )
+              except:
+                  sendResponse(event, context, FAILED, EMPTY_RESPONSE_DATA)
+                  return
+
+              # Decrypted secret using the associated KMS CMK
+              # Ensure the Secret is in String mode
+              if "SecretString" not in get_secret_value_response:
+                  logger.error("The Secret is not in String mode")
+                  sendResponse(event, context, FAILED, EMPTY_RESPONSE_DATA)
+                  return
+
+              # Create Snowflake resource
+              try:
+                  snowflake_connection = connect_to_snowflake(
+                      get_secret_value_response
+                  )
+                  snowflake_cursor = snowflake_connection.cursor()
+
+                  storage_integration_name = storage_integration + "_STORAGE_INTEGRATION"
+
+                  # Create Snowflake Integrations
+                  create_storage_integration(
+                      snowflake_cursor,
+                      storage_integration_name,
+                      role_arn,
+                      s3_bucket_name,
+                  )
+
+                  # Describe Snowflake integrations
+                  storage_integration_info = get_storage_integration_info_for_policy(
+                      snowflake_cursor, storage_integration_name
+                  )
+              except Exception as e:
+                  logger.exception("Problem running SQL statements: " + str(e))
+                  responseData = {
+                      "Failed": "Unable to execute SQL statements in Snowflake"
+                  }
+                  sendResponse(event, context, FAILED, responseData)
+                  return
+              finally:
+                  if "snowflake_cursor" in vars():
+                      snowflake_cursor.close()
+                  if "snowflake_connection" in vars():
+                      snowflake_connection.close()
+
+              # Update IAM role to add Snowflake information
+              logger.info("Updating IAM Role")
+              policy_str = create_policy_string(storage_integration_info)
+
+              try:
+                  iam = boto3.client("iam")
+                  iam.update_assume_role_policy(
+                      PolicyDocument=policy_str, RoleName=role_name
+                  )
+              except Exception as e:
+                  logger.exception("Problem updating assume role policy: " + str(e))
+                  logger.exception("Policy used: " + policy_str)
+                  responseData = {
+                      "Failed": "The assume role policy could not be updated"
+                  }
+                  sendResponse(event, context, FAILED, responseData)
+                  return
+
+              responseData = {"Success": "Snowflake resources created."}
+              sendResponse(event, context, SUCCESS, responseData)
+              logger.info("Success")
+      Layers:
+        - Ref: CreateSnowflakeResourcesLambdaLayer
+      Handler: index.lambda_handler
+      Role: !GetAtt CreateSnowflakeResourcesExecutionRole.Arn
+      Runtime: python3.7
+      Timeout: 600
+      Environment:
+        Variables:
+          Region: !Sub "${AWS::Region}"
+          RoleARN: !GetAtt SnowflakeExternalStageRole.Arn
+          RoleName: !Ref SnowflakeExternalStageRole
+          S3BucketName: !Ref dataS3BucketName
+          StorageIntegrationName: !Ref snowflakeStorageIntegrationName
+          SecretArn: !If [CreateNewSnowflakeSecret, !Ref SnowflakeSecret, !Ref SnowflakeSecretArn]
+          StackName: !Sub "${AWS::StackName}"
+  # Type: Custom - execute create storage integration update ExternalStage TrustPolicy
+  SnowflakeResources:
+    Type: Custom::SnowflakeResources
+    Properties:
+      ServiceToken: !Sub
+        - "${lambdaArn}"
+        - lambdaArn: !GetAtt CreateSnowflakeResourcesLambda.Arn
+
+Outputs:
+  DataS3BucketName:
+    Value: !Ref dataS3BucketName
+  SnowflakeStorageIntegrationName:
+    Value: !Sub
+      - "${snowflakeStorageIntegrationName}_STORAGE_INGRATION"
+      - snowflakeStorageIntegrationName: !Ref snowflakeStorageIntegrationName
+  SnowflakeAccountId:
+    Value: !Ref snowflakeAccount
+  SnowflakeStorageIntegrationRoleArn:
+    Value: !GetAtt SnowflakeExternalStageRole.Arn
+  SnowflakeSecret:
+    Value: !If [CreateNewSnowflakeSecret, !Ref SnowflakeSecret, !Ref SnowflakeSecretArn]
+  KMSKey:
+    Value: !Ref KMSKey
