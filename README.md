@@ -29,8 +29,8 @@
 ## Prerequisites
 
 1. Create an S3 bucket: ***s3-snowflakeintegration-accountId-region***. Replace accountId and region with the AWS Account ID and region of your AWS account. 
-	1. Upload the [snowflakelayer.zip](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/layer/snowflakelayer.zip) in the root folder of this S3 object. This zip file packages the Snowflake connector as an AWS Lambda layer
-	2. Create a folder called *template* and upload the [aws-snowflake-integrationobject.yml](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/cft/aws-snowflake-integrationobject.yml) CloudFormation template. This template is provisioned when the Service Catalog Product is launched and it automates this integration for Snowflake to access S3
+	1. Upload the [snowflakelayer.zip](https://github.com/Snowflake-Labs/aws-integrations-cloudops/blob/master/layer/snowflakelayer.zip) in the root folder of this S3 object. This zip file packages the Snowflake connector as an AWS Lambda layer
+	2. Create a folder called *template* and upload the [aws-snowflake-integrationobject.yml](https://github.com/Snowflake-Labs/aws-integrations-cloudops/blob/master/cft/aws-snowflake-integrationobject.yml) CloudFormation template. This template is provisioned when the Service Catalog Product is launched and it automates this integration for Snowflake to access S3
 2. Create a Snowflake user and role with the ability to create Integraitons in your Snowflake account. Below are sample SQL Commands that can be used.
 ```use role accountadmin;
 create or replace role store_rl;
