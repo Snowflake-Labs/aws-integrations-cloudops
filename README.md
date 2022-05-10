@@ -49,7 +49,7 @@ GRANT ROLE store_rl TO USER store_admin;
 ## How to Install
 
 **1-step install**
-1. Launch the [aws-snowflakeintobj-servicecatalog](https://github.com/aws-samples/aws-datadog-controltower/blob/main/snowflake/cft/aws-snowflakeintobj-servicecatalog.yml) template. The template takes the S3 prerequisites bucket as a single parameter.
+1. Launch the [aws-snowflakeintobj-servicecatalog](https://github.com/Snowflake-Labs/aws-integrations-cloudops/blob/master/cft/aws-snowflakeintobj-servicecatalog.yml) template. The template takes the S3 prerequisites bucket as a single parameter.
  	
 ## Test and Run
 
