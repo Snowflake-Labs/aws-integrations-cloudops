@@ -1,0 +1,69 @@
+# -------------------------------------------------------------------------------------------------
+#
+# Service Catalog Product that launches Snowflake API-GW Integration Objects
+#  
+# Updated: @boscoaws
+# ---------------------------------------------------------------------------------------------------
+
+
+Parameters:
+  S3StagingBucketURL:
+    Type: String
+    Description: S3 Staging Bucket Prefix that contains the Snowflake API-GW Integration template
+    Default: 'https://apigw-accountid-region.s3.amazonaws.com/'
+
+Resources:
+
+#--------------------------------------------------------------------------------------------
+# Service Catalog Portfolio that contains the Snowflake API-GW Integration Product
+#--------------------------------------------------------------------------------------------
+
+  SnowflakeAPIGWIntegrationPortfolio:
+    Type: 'AWS::ServiceCatalog::Portfolio'
+    Properties:
+      AcceptLanguage: en
+      Description: Snowflake API-GW Integration Portfolio
+      DisplayName: Snowflake API-GW Integration Portfolio
+      ProviderName: AWS
+
+  SnowflakeAPIGWIntegrationProduct:
+    Type: 'AWS::ServiceCatalog::CloudFormationProduct'
+    Properties:
+      AcceptLanguage: en
+      Description: This Service Catalog product deploys the Snowflake API-GW Integration Product
+      Distributor: AWS
+      Name: SnowflakeAPIGWIntegrationProduct
+      Owner: AWS
+      SupportEmail: email@mycompany.com
+      SupportUrl: 'https://www.mycompany.com'
+      SupportDescription: >-
+        SnowflakeAPIGWIntegrationProduct
+      ProvisioningArtifactParameters:
+        - Description: This is version 1.0 of the Snowflake API-GW Integration Product
+          Name: Version - 1.0
+          Info:
+            LoadTemplateFromURL: !Sub "${S3StagingBucketURL}template/aws-snowflake-apigw-integrationobject.yml"
+            
+  SnowflakeAPIGWIntegrationPortfolioAssociation:
+    Type: 'AWS::ServiceCatalog::PortfolioProductAssociation'
+    Properties:
+      PortfolioId: !Ref SnowflakeAPIGWIntegrationPortfolio
+      ProductId: !Ref SnowflakeAPIGWIntegrationProduct
+
+  SnowflakeEnduserGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: SnowflakeEnduserGroup
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AWSServiceCatalogEndUserFullAccess
+      
+
+  SnowflakeEnduserGroupPortfolioAssociation:
+    Type: 'AWS::ServiceCatalog::PortfolioPrincipalAssociation'
+    Properties:
+      PrincipalARN: !Sub 'arn:aws:iam::${AWS::AccountId}:group/SnowflakeEnduserGroup'
+      PortfolioId: !Ref SnowflakeAPIGWIntegrationPortfolio
+      PrincipalType: IAM
+
+
+
