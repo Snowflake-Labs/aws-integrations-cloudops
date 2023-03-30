@@ -36,18 +36,32 @@ CREATE or replace STORAGE INTEGRATION myS3Integration
 You should see an output like this:
 ![desc integration](images/descint.png)
 
-You will need the information in the red boxes as the inputs for Cloudformation template.
+You will need the information in the red boxes as the inputs for the Cloudformation template.
 
-3. Click [here](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=Snowflake-storage-integration&templateURL=https://jsnow-vhol-assets.s3.us-west-2.amazonaws.com/storageInt.json) to create the Cloudformation stack.
+3. Now click [here](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=Snowflake-storage-integration&templateURL=https://jsnow-vhol-assets.s3.us-west-2.amazonaws.com/storageInt.json) to create the Cloudformation stack.
    Click `Next`, and you will see the page where you need to type in the values from the step above.
 
 ![cloudformation stack](images/CFT.png)
 
-5. 
-    1. Provisions AWS Secrets Manager to store and retrieve Snowflake connection information
-    2. Provisions a Lambda function that uses the Snowflake python connector:
-        1. Creates a Snowflake integration object and obtains the Snowflake generated *AWS_IAM_USER_ARN* and *AWS_EXTERNAL_ID* from the Snowflake integration 
-        2. Provisions an AWS IAM role that uses the Snowflake generated IAM Principal and External ID from 1 above
-        3. Creates a Snowflake stage object that leverages the snowflake integration
-	
- 
+   Continue clicking through a couple of pages and
+   leave everything as default, then submit the stack. In a few minutes, the stack is deployed.
+
+4. Go back to the Snowflake UI and issue the follow command to create a stage:
+
+For example
+```commandline
+create or replace stage my_stg storage_integration = jsnow_s3_int
+url = 's3://myawesomesnowflakebucket/'
+file_format = (type = 'parquet');
+```
+
+Now list the external stage:
+```
+list @my_stg;
+```
+
+You should be able to see the content of the stage. For example:
+![stage](images/stage.png)
+
+
+   
