@@ -33,7 +33,7 @@ CREATE or replace STORAGE INTEGRATION myS3Integration
 
   desc integration myS3Integration;
 ```
-You should see an output like this:
+You should see an output similar to the screen capture below:
 
 ![desc integration](images/descInt.png)
 
@@ -62,6 +62,7 @@ list @my_stg;
 ```
 
 You should be able to see the content of the stage. For example:
+
 ![stage](images/stage.png)
 
 
