@@ -34,6 +34,7 @@ CREATE or replace STORAGE INTEGRATION myS3Integration
   desc integration myS3Integration;
 ```
 You should see an output like this:
+
 ![desc integration](images/descint.png)
 
 You will need the information in the red boxes as the inputs for the Cloudformation template.
