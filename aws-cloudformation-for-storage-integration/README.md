@@ -51,7 +51,7 @@ You will need the information in the red boxes as the inputs for the Cloudformat
 
 For example
 ```commandline
-create or replace stage my_stg storage_integration = jsnow_s3_int
+create or replace stage my_stg storage_integration = myS3Integration
 url = 's3://myawesomesnowflakebucket/'
 file_format = (type = 'parquet');
 ```
