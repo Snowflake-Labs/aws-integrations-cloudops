@@ -40,7 +40,7 @@ You should see an output similar to the screen capture below:
 
 You will need the information in the red boxes as the inputs for the Cloudformation template.
 
-3. Now click [here](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=Snowflake-storage-integration&templateURL=https://jsnow-vhol-assets.s3.us-west-2.amazonaws.com/storageInt.json) to create the Cloudformation stack.
+3. Now click [here](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=Snowflake-storage-integration&templateURL=https://snowflake-corp-se-workshop.s3.us-west-1.amazonaws.com/CFTs/storageInt.json) to create the Cloudformation stack.
    Click `Next`, and you will see the page where you need to type in the values from the step above.
 
 ![cloudformation stack](images/CFT.png)
