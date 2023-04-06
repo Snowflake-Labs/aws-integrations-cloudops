@@ -52,14 +52,14 @@ You will need the information in the red boxes as the inputs for the Cloudformat
 
 For example
 ```commandline
-create or replace stage my_stg storage_integration = myS3Integration
-url = 's3://myawesomesnowflakebucket/'
-file_format = (type = 'parquet');
+CREATE or REPLACE STAGE my_stg STORAGE_INTEGRATION = myS3Integration
+URL = 's3://myawesomesnowflakebucket/'
+FILE_FORMAT = (TYPE = 'parquet');
 ```
 
 Now list the external stage:
 ```
-list @my_stg;
+LIST @my_stg;
 ```
 
 You should be able to see the content of the stage. For example:
