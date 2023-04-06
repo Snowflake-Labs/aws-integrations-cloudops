@@ -25,14 +25,14 @@ CREATE or replace STORAGE INTEGRATION <name of the integration>
 ```
 For example:
 ```commandline
-CREATE or replace STORAGE INTEGRATION myS3Integration
+CREATE or REPLACE STORAGE INTEGRATION myS3Integration
   TYPE = EXTERNAL_STAGE
   STORAGE_PROVIDER = 'S3'
   STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::111222333444:role/myIntRole'
   ENABLED = TRUE
   STORAGE_ALLOWED_LOCATIONS = ('s3://myawesomesnowflakebucket/');
 
-  desc integration myS3Integration;
+DESC INTEGRATION myS3Integration;
 ```
 You should see an output similar to the screen capture below:
 
