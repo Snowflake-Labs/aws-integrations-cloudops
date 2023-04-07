@@ -11,7 +11,7 @@ an IAM role that can be assumed by Snowflake and has the permissions to access t
 
 ## How to use the template
 
-1. Create a S3 bucket that you want to integrate with Snowflake if it doesn't exist, then copy your data sets to the bucket.
+1. Create a S3 bucket that you want to integrate with Snowflake if it doesn't exist, then copy your datasets to the bucket.
 2. In your Snowflake UI, open a worksheet and run the following command to create a storage integration
 ```commandline
 CREATE or REPLACE STORAGE INTEGRATION <name of the integration>
