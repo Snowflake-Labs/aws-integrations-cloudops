@@ -1,7 +1,7 @@
 <p align="center">
 </p>
 
-# Use a AWS Cloudformation template to automate Snowflake storage integration to access Amazon S3
+# Use an AWS Cloudformation template to automate Snowflake storage integration to access Amazon S3
 
 1. Snowflake storage integrations are Snowflake objects that allow Snowflake to read and write data to Amazon S3. Snowflake storage integrations leverage AWS IAM to access S3. The S3 bucket is referenced by the Snowflake integration from an external (i.e. S3) Snowflake stage object
 2. This solution provides automation for Snowflake to access a S3 bucket by deploying a Cloudformation template. The template takes outputs from the 'desc integration' command from Snowflake and creates
